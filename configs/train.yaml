@@ -1,0 +1,58 @@
+# QLoRA + optimiser hyperparameters, Table 3.6 of the dissertation.
+# `initial` is used by a single training run (scripts/09_train.py --config configs/train.yaml).
+# `sweep` values are consumed by scripts/09_train.py --sweep, which trains one
+# run per grid point and selects on validation chrF++ (never on loss alone).
+
+seed: 42
+
+base_model: null  # filled from configs/model.yaml selected_base_model after Phase 2
+
+quantisation:
+  initial: "nf4-4bit"
+  sweep: ["nf4-4bit"]  # fixed per spec
+
+lora:
+  r:
+    initial: 16
+    sweep: [8, 16, 32, 64]
+  alpha:
+    initial: 32
+    sweep: [16, 32, 64]
+  dropout:
+    initial: 0.05
+    sweep: [0.05]
+  target_modules:
+    initial: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+    sweep:
+      - ["q_proj", "v_proj"]
+      - ["q_proj", "k_proj", "v_proj", "o_proj"]
+      - ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+optim:
+  learning_rate:
+    initial: 2.0e-4
+    sweep: [1.0e-4, 2.0e-4, 5.0e-4]
+  scheduler: "cosine"
+  warmup_ratio: 0.03
+  epochs:
+    initial: 3
+    sweep: [2, 3, 4, 5]
+  effective_batch_size: 16
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  max_seq_length: 1024
+  optimiser: "paged_adamw_8bit"
+  weight_decay: 0.0
+  max_grad_norm: 0.3
+
+early_stopping:
+  metric: "val_loss"
+  patience: 3
+  min_delta: 0.0
+
+selection_metric: "val_chrf++"  # sweep winner is chosen on this, logged alongside val_loss
+
+logging:
+  eval_steps: 50
+  save_steps: 50
+  logging_steps: 10

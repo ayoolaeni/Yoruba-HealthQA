@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Secrets
+.env
+
+# Large / regenerable artefacts (build-spec: "models/ (gitignored)").
+# Every script that writes into these creates the directory on demand
+# (mkdir(parents=True, exist_ok=True)), so an empty dir need not be tracked --
+# git cannot re-include a file inside a wholesale-ignored directory anyway.
+models/
+runs/
+data/raw/
+data/interim/
+data/validated/
+data/final/
+
+# The unblinding key must never be committed or shared with raters
+reports/.blinding_key.json
+
+# OS cruft
+.DS_Store
+Thumbs.db

@@ -1,0 +1,39 @@
+# Base model candidates for tokeniser fertility analysis (Phase 2) and
+# language adaptation (Phase 3). Licence column feeds table_4_3 directly.
+
+seed: 42
+
+candidates:
+  - name: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    params_b: 8.0
+    licence: "Llama 3.1 Community License"
+    redistribution_of_derived_weights: "conditional (attribution + naming clause)"
+    notes: "Documented multilingual coverage; Yoruba not a primary training language."
+  - name: "CohereForAI/aya-23-8B"
+    params_b: 8.0
+    licence: "CC-BY-NC-4.0"
+    redistribution_of_derived_weights: "non-commercial only"
+    notes: "Explicit multilingual instruction tuning across 23 languages incl. some African languages."
+  - name: "google/gemma-2-9b-it"
+    params_b: 9.0
+    licence: "Gemma Terms of Use"
+    redistribution_of_derived_weights: "conditional"
+    notes: "Slightly above 8B nominal cutoff; keep only if fertility results justify it."
+  - name: "Unbabel/TowerInstruct-7B-v0.2"
+    params_b: 7.0
+    licence: "CC-BY-NC-4.0"
+    redistribution_of_derived_weights: "non-commercial only"
+    notes: "Translation-oriented instruction tuning; useful as a B3 pipeline component."
+
+# Selection is DATA-DRIVEN: 07_fertility.py must run and populate
+# reports/table_4_3_tokeniser_fertility.csv before `selected_base_model` below
+# is filled in. Do not hand-pick a base model ahead of the fertility results.
+selected_base_model: null
+
+language_adaptation:
+  enabled: true
+  yoruba_corpus_glob: "data/raw/monolingual_yoruba/*.txt"
+  english_corpus_glob: "data/raw/monolingual_english_edu/*.txt"
+  mixture_ratio_yoruba: 0.7   # per Buzaaba et al., 2025 style mixing; sweep-able
+  max_steps: 20000
+  block_size: 1024

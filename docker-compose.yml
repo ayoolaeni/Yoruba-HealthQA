@@ -1,0 +1,11 @@
+services:
+  yoruba-healthqa:
+    build: .
+    container_name: yoruba-healthqa
+    ports:
+      - "7860:7860"
+    environment:
+      YHQA_BASE_MODEL: ${YHQA_BASE_MODEL:-}
+      YHQA_ADAPTER_PATH: ${YHQA_ADAPTER_PATH:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    restart: unless-stopped

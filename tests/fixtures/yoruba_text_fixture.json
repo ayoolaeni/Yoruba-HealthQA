@@ -1,0 +1,42 @@
+{
+  "nfc_idempotent_cases": [
+    "Kí ni àwọn àmì àrùn ibà?",
+    "ẹ̀jẹ̀",
+    "Ṣùgbọ́n kò yẹ kí a gbójú fọ́ ìtọ́jú."
+  ],
+  "strip_diacritics_cases": [
+    { "input": "Kí ni àwọn àmì àrùn ibà?", "expected_nodia": "Ki ni awon ami arun iba?" },
+    { "input": "ẹ̀jẹ̀", "expected_nodia": "eje" },
+    { "input": "Ṣùgbọ́n", "expected_nodia": "Sugbon" }
+  ],
+  "charset_valid_strict": [
+    "Kí ni àwọn àmì àrùn ibà?",
+    "Ṣùgbọ́n kò yẹ kí a gbójú fọ́ ìtọ́jú.",
+    "ẹ̀jẹ̀ pupa"
+  ],
+  "charset_invalid_strict": [
+    "Malaria is caused by mosquitoes.",
+    "Vaccine coverage increased by 12%.",
+    "Xenophobia is not a symptom."
+  ],
+  "diacritic_accuracy_cases": [
+    {
+      "description": "identical strings -> perfect score",
+      "hyp": "Kí ni àwọn àmì àrùn ibà?",
+      "ref": "Kí ni àwọn àmì àrùn ibà?",
+      "expected": 1.0
+    },
+    {
+      "description": "diacritics fully stripped in hyp, 2 of 7 bare-aligned tokens happen to carry no diacritics in ref",
+      "hyp": "Arun iba maa n fa iba gbigbona",
+      "ref": "Àrùn ibà maa ń fa ibà gbígbóná",
+      "expected": 0.2857142857142857
+    },
+    {
+      "description": "no lexical overlap at all -> zero denominator -> 0.0",
+      "hyp": "ile iwosan",
+      "ref": "osi anu meta",
+      "expected": 0.0
+    }
+  ]
+}

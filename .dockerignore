@@ -1,0 +1,20 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.gitignore
+
+# Large / not needed to demo the prototype UI
+data/raw/
+data/interim/
+data/validated/
+data/final/
+models/
+runs/
+tests/
+
+# Secrets -- never bake into an image; pass at `docker run` time instead
+.env
+reports/.blinding_key.json

@@ -1,0 +1,125 @@
+# Sources, topics, and split configuration for Phase 1 (dataset construction).
+# Chapter 3, Section 3.6.
+
+seed: 42
+
+# Fixed topic taxonomy. Every QA record must carry one of these topics.
+# Do not add topics ad hoc in code — extend this list and re-run affected stages.
+topics:
+  - malaria
+  - typhoid
+  - tuberculosis
+  - hiv
+  - hypertension
+  - diabetes
+  - maternal_health
+  - child_health
+  - immunisation
+  - nutrition
+  - wash
+  - mental_health
+  - covid19
+
+# Ingestion sources. Each source MUST declare a licence before 01_ingest.py will
+# fetch it — the script refuses (loud error) any source with licence: null.
+# retrieval_notes documents how a human should confirm the licence terms; the
+# agent does not adjudicate licence law, it only records what it was told.
+sources:
+  who_factsheets:
+    kind: web
+    base_url: "https://www.who.int/news-room/fact-sheets/detail/"
+    slugs:
+      - malaria
+      - typhoid
+      - tuberculosis
+      - hiv-aids
+      - hypertension
+      - diabetes
+      - malnutrition
+    licence: "CC BY-NC-SA 3.0 IGO"
+    licence_url: "https://www.who.int/about/policies/publishing/copyright"
+    retrieval_notes: >
+      Verify the fact sheet's own footer licence at retrieval time; WHO revises
+      per-page terms occasionally. Non-commercial dissertation use only.
+  ncdc_advisories:
+    kind: web
+    base_url: "https://ncdc.gov.ng/diseases/"
+    slugs: []  # researcher fills in specific advisory URLs after confirming licence
+    licence: null
+    licence_url: "https://ncdc.gov.ng"
+    retrieval_notes: >
+      NCDC does not publish a blanket content licence. Researcher must obtain
+      written permission or confirm a specific advisory's usage terms before
+      adding it here. 01_ingest.py will refuse this source while licence is null.
+  fmoh_nphcda:
+    kind: manual
+    base_url: null
+    slugs: []
+    licence: null
+    licence_url: null
+    retrieval_notes: >
+      Federal Ministry of Health / NPHCDA materials are typically distributed as
+      PDFs, not scraped pages. Researcher must place cleared PDFs/text in
+      data/raw/fmoh_nphcda/manual/ with a licence recorded here before ingest.
+  medlineplus:
+    kind: web
+    base_url: "https://medlineplus.gov/"
+    slugs:
+      - malaria.html
+      # No dedicated MedlinePlus health-topic page for typhoid fever was found
+      # (typhoidfever.html and variants 404). If one exists under a different
+      # slug, add it here; otherwise WHO's typhoid fact sheet is the sole
+      # typhoid source until the researcher supplies another.
+      - tuberculosis.html
+      - hivaids.html
+      - highbloodpressure.html
+      - diabetes.html
+    licence: "US NLM public domain (17 U.S.C. 105), attribution requested"
+    licence_url: "https://medlineplus.gov/about/using/usingcontent/"
+    retrieval_notes: >
+      MedlinePlus content is US government work and public domain, but confirm
+      any embedded third-party content (e.g. syndicated encyclopedia articles)
+      is excluded before ingesting.
+  afrimed_qa:
+    kind: dataset
+    base_url: "https://huggingface.co/datasets/intronhealth/afrimedqa_v2"
+    slugs: []
+    licence: null
+    retrieval_notes: >
+      Check the dataset card's current licence and any consumer-query subset
+      filter criteria before setting licence here; 01_ingest.py refuses without it.
+
+# Near-duplicate filtering (06_finalise_dataset.py)
+dedup:
+  method: char_ngram_jaccard
+  ngram_size: 5
+  similarity_threshold: 0.85
+
+# Safety filter keyword triggers routed to refusal rewriting (06_finalise_dataset.py).
+# This is a coarse pre-filter; human clinical validation (Phase 1.7) is the
+# authoritative safety check.
+safety_filter_terms:
+  - dosage
+  - dose
+  - mg/kg
+  - milligram
+  - "how much.*should i take"
+  - prescribe
+  - prescription
+  - "call an ambulance"
+  - "emergency procedure"
+
+# Split configuration (06_finalise_dataset.py)
+split:
+  train: 0.80
+  val: 0.10
+  test: 0.10
+  stratify_by: topic
+  group_by: claim_id
+
+# Validation sampling (05_export_validation.py)
+validation:
+  clinical_coverage: 1.0
+  linguistic_coverage_target: 1.0
+  linguistic_coverage_floor: 0.30
+  double_annotation_fraction: 0.10

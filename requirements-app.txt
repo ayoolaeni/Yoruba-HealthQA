@@ -1,0 +1,17 @@
+# Minimal dependencies to run app/app.py (the Gradio demo) -- deliberately
+# NOT the full requirements.txt, so the Docker image for showing the
+# prototype/guardrails stays small and builds in under a minute on a laptop
+# with no GPU. If YHQA_BASE_MODEL is set to actually generate answers, the
+# container also needs torch/transformers/peft/bitsandbytes from
+# requirements.txt -- see Dockerfile's comment on the optional --build-arg.
+#
+# gradio is pinned to a version confirmed (by actually building and running
+# this image) to install cleanly with today's huggingface_hub release --
+# gradio==4.44.0 (an earlier pin here) silently breaks once pip resolves a
+# current huggingface_hub, which removed a symbol (HfFolder) that
+# gradio 4.44.0's own code still imports. Bump deliberately, re-test the
+# build, if you ever change this.
+gradio==6.26.0
+pyyaml==6.0.2
+python-dotenv==1.0.1
+rich==13.8.1

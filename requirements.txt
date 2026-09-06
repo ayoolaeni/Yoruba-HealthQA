@@ -1,0 +1,30 @@
+torch==2.4.1
+transformers==4.44.2
+peft==0.12.0
+bitsandbytes==0.43.3
+accelerate==0.34.2
+datasets==2.21.0
+trl==0.10.1
+sacrebleu==2.4.3
+rouge-score==0.1.2
+bert-score==0.3.13
+unbabel-comet==2.2.2
+pandas==2.2.2
+numpy==1.26.4
+scipy==1.13.1
+statsmodels==0.14.2
+krippendorff==0.6.1
+matplotlib==3.9.2
+gradio==6.26.0  # confirmed installable today; gradio==4.44.0 breaks against current huggingface_hub (see requirements-app.txt)
+pyyaml==6.0.2
+tqdm==4.66.5
+python-dotenv==1.0.1
+rich==13.8.1
+openpyxl==3.1.5
+tabulate==0.9.0
+pytest==8.3.3
+# Not in the spec's package list, but required by scripts/01_ingest.py to
+# fetch and parse "kind: web" sources (WHO/MedlinePlus fact sheets) -- there
+# is no HTTP/HTML stack otherwise.
+requests==2.32.3
+beautifulsoup4==4.12.3

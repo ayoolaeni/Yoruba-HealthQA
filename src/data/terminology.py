@@ -25,6 +25,14 @@ SEED_CLINICAL_TERMS_EN = [
     "mosquito", "parasite", "bacteria", "virus", "infection", "contagious",
     "pregnancy", "prenatal", "postnatal", "malnutrition", "nutrition", "anaemia",
     "anemia", "dehydration", "sanitation", "hygiene",
+    # Added after real machine-translation output review surfaced these as
+    # high-risk: NLLB either mistranslated them outright (breastfeeding ->
+    # "oyún"/pregnancy) or rendered them inconsistently across records
+    # (measles). Flagging these for the researcher's canonical_yo column is
+    # more important than most of the seed list above.
+    "breastfeeding", "measles", "stunting", "stunted", "wastewater", "sludge",
+    "cholera", "depression", "mental health", "maternal mortality",
+    "pneumonia", "diarrhoea", "diarrhea", "obesity", "overweight",
 ]
 
 TERMINOLOGY_CSV_COLUMNS = ["term_en", "frequency", "canonical_yo", "notes"]
@@ -59,7 +67,13 @@ def load_canonical_terminology(csv_path: str | Path) -> dict[str, str]:
     """Loads the researcher-completed terminology.csv into
     {term_en_lower: canonical_yo}, skipping rows left blank (not yet decided)."""
     canonical: dict[str, str] = {}
-    with open(csv_path, encoding="utf-8") as f:
+    # utf-8-sig, not utf-8: Excel's "CSV UTF-8 (Comma delimited)" Save As
+    # writes a byte-order-mark at the start of the file. Plain utf-8 leaves
+    # that BOM attached to the first header cell ("term_en" becomes
+    # "﻿term_en"), which silently breaks every row's lookup -- verified
+    # by reproducing an Excel-saved file and getting an empty result back.
+    # utf-8-sig strips the BOM if present and behaves like plain utf-8 if not.
+    with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
             canonical_yo = (row.get("canonical_yo") or "").strip()

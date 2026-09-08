@@ -64,6 +64,82 @@ def test_split_into_claims_drops_question_mark_link_titles():
     assert claims == ["Blood pressure is the force of your blood pushing against artery walls."]
 
 
+def test_split_into_claims_drops_us_gov_site_chrome():
+    # Regression test: MedlinePlus/.gov pages emit a fixed "secure connection"
+    # notice that fuses into a plausible-looking pseudo-sentence.
+    raw_text = (
+        "Malaria is a life-threatening disease spread by mosquitoes.\n"
+        ") or https:// means you've safely connected to the .gov website.\n"
+        "A .gov website belongs to an official government organization in the United States.\n"
+    )
+    claims = split_into_claims(raw_text)
+    assert claims == ["Malaria is a life-threatening disease spread by mosquitoes."]
+
+
+def test_split_into_claims_drops_citation_list_entries():
+    raw_text = (
+        "Tuberculosis disease is treated with special antibiotics.\n"
+        "Article: Modeling Treatment Response in Tuberculosis Early Bactericidal Activity Trials.\n"
+    )
+    claims = split_into_claims(raw_text)
+    assert claims == ["Tuberculosis disease is treated with special antibiotics."]
+
+
+def test_split_into_claims_drops_medlineplus_standing_disclaimers():
+    raw_text = (
+        "Diabetes can damage blood vessels in the heart, eyes, kidneys and nerves.\n"
+        "The information on this site should not be used as a substitute for professional medical care or advice.\n"
+        "MedlinePlus also links to health information from non-government Web sites.\n"
+    )
+    claims = split_into_claims(raw_text)
+    assert claims == ["Diabetes can damage blood vessels in the heart, eyes, kidneys and nerves."]
+
+
+def test_split_into_claims_drops_freeform_bibliography_entries():
+    raw_text = (
+        "Depression is different from usual mood fluctuations.\n"
+        "Seattle: Institute for Health Metrics and Evaluation; 2024 (https://example.org/data, accessed 13 August 2025).\n"
+    )
+    claims = split_into_claims(raw_text)
+    assert claims == ["Depression is different from usual mood fluctuations."]
+
+
+def test_split_into_claims_drops_bibliography_entries():
+    # Regression test: each line below is a real reference-list entry that
+    # leaked through into the dataset before these filters were added.
+    good = "Malaria can also cause anaemia."
+    bad_lines = [
+        "Evans-Lacko S, Aguilar-Gaxiola S, Al-Hamzawi A, et al.",
+        "(3) Mental health atlas 2020.",
+        "Geneva: World Health Organization; 2021 (https://iris.who.int/handle/10665/345946).",
+        "Licence: CC BY-NC-SA 3.0 IGO.",
+        "2021;14(Suppl 1) (https://doi.org/10.1080/16549716.2021.1974677).",
+        "Mekong Malaria Elimination Programme webpage.",
+        "Reprod Health 18, 216 (2021).",
+    ]
+    raw_text = good + "\n" + "\n".join(bad_lines) + "\n"
+    claims = split_into_claims(raw_text)
+    assert claims == [good]
+
+
+def test_split_into_claims_merges_comma_led_continuation():
+    # Regression test: an inline link boundary can drop the line break right
+    # before a comma rather than mid-word; the fragment must be reattached
+    # to its subject clause, not kept as a standalone claim.
+    raw_text = "The WHO Global Technical Strategy for malaria\n, updated in 2021, provides a technical framework.\n"
+    claims = split_into_claims(raw_text)
+    assert claims == ["The WHO Global Technical Strategy for malaria , updated in 2021, provides a technical framework."]
+
+
+def test_split_into_claims_drops_fragment_starting_with_comma_when_unmergeable():
+    # If a comma-led fragment has no preceding buffer to merge into (e.g. it
+    # is the very first line of the extracted text), it must still be
+    # dropped rather than kept as a subject-less claim.
+    raw_text = ", updated in 2021, provides a technical framework for all countries.\n"
+    claims = split_into_claims(raw_text)
+    assert claims == []
+
+
 def test_split_into_claims_drops_too_short_and_too_long():
     raw_text = "Ok.\n" + ("A very long run-on sentence. " * 30) + "\n"
     claims = split_into_claims(raw_text)

@@ -46,6 +46,21 @@ SLUG_TO_TOPIC = {
     "malnutrition": "nutrition",
     "malaria.html": "malaria",
     "tuberculosis.html": "tuberculosis",
+    "maternal-mortality": "maternal_health",
+    "children-reducing-mortality": "child_health",
+    "pneumonia": "child_health",
+    "diarrhoeal-disease": "child_health",
+    "immunization-coverage": "immunisation",
+    "measles": "immunisation",
+    "obesity-and-overweight": "nutrition",
+    "anaemia": "nutrition",
+    "drinking-water": "wash",
+    "sanitation": "wash",
+    "hygiene": "wash",
+    "cholera": "wash",
+    "mental-disorders": "mental_health",
+    "depression": "mental_health",
+    "coronavirus-disease-(covid-19)": "covid19",
 }
 
 TOPIC_DISPLAY_NAMES = {

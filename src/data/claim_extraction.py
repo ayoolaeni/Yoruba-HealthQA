@@ -41,6 +41,25 @@ _NAV_BOILERPLATE_PATTERNS = [
     r"^reading time:?.*$",
     r"^\d{1,2} (january|february|march|april|may|june|july|august|september|october|november|december) \d{4}$",
     r"^who$|^paho$|^ncdc$|^nphcda$|^fmoh$",
+    # US .gov site-chrome ("secure connection" padlock notice), verified
+    # leaking through as fused pseudo-sentences on MedlinePlus pages.
+    r".*official government organization.*",
+    r".*safely connected.*\.gov.*",
+    # MedlinePlus's own standing site disclaimers (not source content).
+    r".*substitute for professional medical care.*",
+    r".*medlineplus also links to.*",
+    # Citation/further-reading list entries, not prose claims. WHO/MedlinePlus
+    # fact sheets end with a numbered bibliography; these patterns were each
+    # matched against a real leaked example before being added here:
+    r"^(article|journal|report|reference|study|source):\s",
+    r".*accessed \d{1,2} \w+ \d{4}.*",             # "...(url, accessed 13 August 2025)."
+    r"\bet al\.?\s*$|\bet al\.?,",                  # author-list citations
+    r"^\(\d+\)\s",                                  # "(3) Mental health atlas 2020."
+    r"^[A-Z][a-zA-Z ]{2,25}:\s.*;\s*\d{4}",         # "Geneva: World Health Organization; 2021"
+    r"^licen[cs]e:\s|\bcc by(-nc)?(-sa)?\b",         # "Licence: CC BY-NC-SA 3.0 IGO."
+    r"\bdoi:|doi\.org|\b10\.\d{4,9}/",              # DOI citations
+    r"\bwebpage\.?\s*$",                            # "... Elimination Programme webpage."
+    r",\s*\d+,?\s*\d*\s*\(\d{4}\)\.?\s*$",          # "Reprod Health 18, 216 (2021)."
 ]
 _NAV_BOILERPLATE_RE = re.compile("|".join(_NAV_BOILERPLATE_PATTERNS), re.IGNORECASE)
 
@@ -50,7 +69,11 @@ MIN_CLAIM_WORDS = 5
 
 
 def is_boilerplate(line: str) -> bool:
-    return bool(_NAV_BOILERPLATE_RE.match(line.strip()))
+    # search(), not match(): several patterns (e.g. "et al.", "webpage.",
+    # a trailing journal-citation suffix) are meant to detect a distinctive
+    # substring anywhere in the line, not just at position 0. Patterns that
+    # need start-anchoring already include an explicit "^".
+    return bool(_NAV_BOILERPLATE_RE.search(line.strip()))
 
 
 def _looks_like_a_sentence(candidate: str) -> bool:
@@ -74,6 +97,16 @@ def _looks_like_a_sentence(candidate: str) -> bool:
         return False
     if len(candidate.split()) < MIN_CLAIM_WORDS:
         return False
+    # A genuine sentence starts with a capital letter, a digit, or an opening
+    # quote/parenthesis. A candidate starting with a lowercase letter or with
+    # continuation punctuation (",", ";", ")") means _merge_wrapped_lines
+    # failed to reattach it to its missing subject clause -- e.g. a stray
+    # inline-link line break left ", updated in 2021, provides a technical
+    # framework..." as its own fragment with no verb's subject. Better to
+    # drop it than let a subject-less fragment become an answer.
+    first_char = candidate[0]
+    if not (first_char.isupper() or first_char.isdigit() or first_char in "\"'“("):
+        return False
     return True
 
 
@@ -83,10 +116,13 @@ def _merge_wrapped_lines(lines: list[str]) -> list[str]:
     the middle of a sentence produces a stray newline mid-sentence, such as
     "If you travel\\nto these countries, you are at risk."). If the current
     buffered line does not yet end in sentence punctuation and the next
-    non-blank line starts with a lowercase letter -- a strong continuation
-    signal, since a real new sentence/heading starts with a capital letter or
-    digit -- join them with a space instead of treating them as separate
-    units.
+    non-blank line starts with a lowercase letter OR with continuation
+    punctuation (",", ";", ")") -- both strong continuation signals, since a
+    real new sentence/heading starts with a capital letter or digit -- join
+    them with a space instead of treating them as separate units. The
+    comma/semicolon case covers e.g. "The WHO strategy\\n, updated in 2021,
+    provides..." where an inline link boundary drops the break right before
+    a comma rather than mid-word.
     """
     merged: list[str] = []
     buffer = ""
@@ -103,7 +139,7 @@ def _merge_wrapped_lines(lines: list[str]) -> list[str]:
                 buffer = ""
             merged.append(line)
             continue
-        if buffer and not buffer.endswith((".", "!", "?", ":")) and line[:1].islower():
+        if buffer and not buffer.endswith((".", "!", "?", ":")) and (line[:1].islower() or line[:1] in ",;)"):
             buffer = f"{buffer} {line}"
         else:
             if buffer:

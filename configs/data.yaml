@@ -36,6 +36,25 @@ sources:
       - hypertension
       - diabetes
       - malnutrition
+      # Added to broaden topic coverage toward the 1,500-3,000 record
+      # target (build spec section 3); each slug was verified to resolve
+      # (HTTP 200) before being added here, per the "never invent data"
+      # rule extending to not guessing at source URLs either.
+      - maternal-mortality           # topic: maternal_health
+      - children-reducing-mortality  # topic: child_health
+      - pneumonia                    # topic: child_health
+      - diarrhoeal-disease           # topic: child_health
+      - immunization-coverage        # topic: immunisation
+      - measles                      # topic: immunisation
+      - obesity-and-overweight       # topic: nutrition
+      - anaemia                      # topic: nutrition
+      - drinking-water               # topic: wash
+      - sanitation                   # topic: wash
+      - hygiene                      # topic: wash
+      - cholera                      # topic: wash
+      - mental-disorders             # topic: mental_health
+      - depression                   # topic: mental_health
+      - coronavirus-disease-(covid-19)  # topic: covid19
     licence: "CC BY-NC-SA 3.0 IGO"
     licence_url: "https://www.who.int/about/policies/publishing/copyright"
     retrieval_notes: >

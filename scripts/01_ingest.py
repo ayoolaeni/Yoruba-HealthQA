@@ -34,7 +34,14 @@ def fetch_html_text(url: str, timeout: int = 30) -> str:
 
     resp = requests.get(url, timeout=timeout, headers={"User-Agent": "yoruba-healthqa-research/1.0"})
     resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
+    # Use raw bytes (resp.content), NOT resp.text: when a server's
+    # Content-Type header omits a charset (MedlinePlus does this),
+    # `requests` falls back to the HTTP spec default of ISO-8859-1 even when
+    # the actual bytes are UTF-8, silently mangling every curly
+    # quote/apostrophe (verified: this happened on medlineplus.gov pages).
+    # BeautifulSoup's own encoding detection (UnicodeDammit, from the bytes
+    # and any <meta charset> tag) is far more reliable here.
+    soup = BeautifulSoup(resp.content, "html.parser")
     for tag in soup(["script", "style", "nav", "footer", "header"]):
         tag.decompose()
     text = soup.get_text(separator="\n")

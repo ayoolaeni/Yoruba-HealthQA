@@ -56,6 +56,22 @@ def test_load_canonical_terminology_skips_blank_rows(tmp_path):
     assert canonical == {"malaria": "ibà"}
 
 
+def test_load_canonical_terminology_handles_excel_utf8_bom(tmp_path):
+    # Regression test: Excel's "CSV UTF-8 (Comma delimited)" Save As option
+    # (the one a researcher must use to keep Yoruba diacritics intact)
+    # writes a byte-order-mark at the start of the file. Confirmed this
+    # silently broke every row's lookup before load_canonical_terminology
+    # switched to utf-8-sig.
+    csv_path = tmp_path / "terminology.csv"
+    with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["term_en", "frequency", "canonical_yo", "notes"])
+        writer.writerow(["measles", "52", "Kitipi", ""])
+
+    canonical = load_canonical_terminology(csv_path)
+    assert canonical == {"measles": "Kitipi"}
+
+
 def test_check_record_terminology_flags_missing_canonical_rendering():
     canonical = {"malaria": "ibà"}
     # Yoruba text uses the canonical rendering -- no flag

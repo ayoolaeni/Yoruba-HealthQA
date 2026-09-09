@@ -60,6 +60,7 @@ _NAV_BOILERPLATE_PATTERNS = [
     r"\bdoi:|doi\.org|\b10\.\d{4,9}/",              # DOI citations
     r"\bwebpage\.?\s*$",                            # "... Elimination Programme webpage."
     r",\s*\d+,?\s*\d*\s*\(\d{4}\)\.?\s*$",          # "Reprod Health 18, 216 (2021)."
+    r"\[online database\]",                          # "2021 Global Burden of Disease (GBD) [online database]."
 ]
 _NAV_BOILERPLATE_RE = re.compile("|".join(_NAV_BOILERPLATE_PATTERNS), re.IGNORECASE)
 
@@ -180,36 +181,87 @@ class QuestionCategory:
     name: str
     trigger_words: tuple[str, ...]
     template: str  # "{topic}" is substituted with the human-readable topic name
+    allowed_topics: frozenset[str] | None = None   # None = allowed for every topic
+    excluded_topics: frozenset[str] = frozenset()  # topics this category must never apply to
 
+
+# "How does {topic} spread?" only makes sense for topics that ARE
+# transmissible diseases. Applying it to e.g. "immunisation" or "nutrition"
+# (an intervention/health-area, not a pathogen) produces a logically
+# backwards question -- verified by finding "How does immunisation spread?"
+# in real output before this allowlist was added. Must match the display
+# names in scripts/02_build_qa.py:TOPIC_DISPLAY_NAMES exactly.
+TRANSMISSIBLE_DISEASE_TOPICS = frozenset({"malaria", "typhoid", "tuberculosis (TB)", "HIV", "COVID-19"})
 
 QUESTION_CATEGORIES = [
     QuestionCategory("symptoms", ("symptom", "sign of", "signs of", "feel like"),
                       "What are the symptoms of {topic}?"),
-    QuestionCategory("causes", ("caused by", "is caused", "cause of", "due to a"),
+    QuestionCategory("causes", ("caused by", "is caused", "cause of", "due to"),
                       "What causes {topic}?"),
     QuestionCategory("transmission", ("spread", "transmit", "contagious", "infect"),
-                      "How does {topic} spread?"),
+                      "How does {topic} spread?", allowed_topics=TRANSMISSIBLE_DISEASE_TOPICS),
+    # The four categories below were added after measuring that 52% of a
+    # real 1,443-claim corpus fell through to the generic fallback -- each
+    # trigger list was built from actually-observed fallback examples, not
+    # guessed. Placed after symptoms/causes/transmission so a claim matching
+    # one of those (more specific) categories keeps getting that template
+    # even if it also happens to contain a diagnosis/statistic word.
+    QuestionCategory("diagnosis", ("detect", "diagnos", "screened", "screening",
+                                     "confirmation", "measure blood pressure",
+                                     "blood test", "check-up", "checkup"),
+                      "How is {topic} diagnosed?"),
+    # Excludes "immunisation" itself for the same reason as above: immunisation
+    # IS a prevention measure, so "How can immunisation be prevented?" is
+    # backwards (verified in real output before this exclusion was added).
     QuestionCategory("prevention", ("prevent", "avoid", "protect against", "vaccine", "vaccination"),
-                      "How can {topic} be prevented?"),
-    QuestionCategory("treatment", ("treat", "cure", "medicine", "therapy", "manage"),
+                      "How can {topic} be prevented?", excluded_topics=frozenset({"immunisation"})),
+    QuestionCategory("treatment", ("treat", "cure", "medicine", "therapy", "manage",
+                                     "keep appointments", "follow up", "follow-up"),
                       "How is {topic} treated?"),
+    QuestionCategory("complications", ("can affect", "can impair", "can lead to",
+                                        "complication", "can result in", "quality of life",
+                                        "can worsen"),
+                      "What complications can {topic} cause?"),
     QuestionCategory("risk", ("risk", "more likely", "higher chance", "vulnerable"),
                       "Who is most at risk from {topic}?"),
+    QuestionCategory("statistics", ("million", "billion", "%", "per 100 000", "per 100000",
+                                      "estimated at", "reported worldwide",
+                                      "coverage is estimated", "prevalence"),
+                      "How common is {topic} globally?"),
+    QuestionCategory("definition", ("is a form of", "is a type of", "refers to",
+                                      "is defined as", "also known as", "is known as",
+                                      "is called", "stands for", "occurs when", "occurs either",
+                                      "is a chronic", "is a disease that"),
+                      "What is {topic}?"),
 ]
 
 GENERIC_TEMPLATE = "What should I know about {topic}?"
 
 
-def classify_claim(claim: str) -> QuestionCategory | None:
+def classify_claim(claim: str, topic_display_name: str | None = None) -> QuestionCategory | None:
+    """Returns the first matching category whose trigger words appear in
+    `claim` AND whose topic constraints (allowed_topics/excluded_topics)
+    permit `topic_display_name` -- a category match that fails the topic
+    check is skipped, not returned, so e.g. a "spread"-triggering claim on
+    the "immunisation" topic falls through to a later category (or the
+    generic template) instead of producing "How does immunisation spread?".
+    If topic_display_name is None, topic constraints are not checked (used
+    by callers that only want the content-based category, e.g. tests)."""
     lowered = claim.lower()
     for category in QUESTION_CATEGORIES:
-        if any(trigger in lowered for trigger in category.trigger_words):
-            return category
+        if not any(trigger in lowered for trigger in category.trigger_words):
+            continue
+        if topic_display_name is not None:
+            if category.allowed_topics is not None and topic_display_name not in category.allowed_topics:
+                continue
+            if topic_display_name in category.excluded_topics:
+                continue
+        return category
     return None
 
 
 def generate_question_template(claim: str, topic_display_name: str) -> str:
-    category = classify_claim(claim)
+    category = classify_claim(claim, topic_display_name)
     template = category.template if category else GENERIC_TEMPLATE
     return template.format(topic=topic_display_name)
 

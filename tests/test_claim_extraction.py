@@ -165,6 +165,36 @@ def test_generate_question_template_generic_fallback():
     assert q == "What should I know about malaria?"
 
 
+def test_generate_question_template_transmission_only_for_transmissible_diseases():
+    # Regression test: "How does immunisation spread?" is nonsensical --
+    # immunisation is a prevention measure, not a communicable disease.
+    claim = "One person infected by measles can generate up to 18 secondary infections."
+    q = generate_question_template(claim, "immunisation")
+    assert "spread" not in q
+    assert q == "What should I know about immunisation?"
+
+
+def test_generate_question_template_transmission_still_applies_to_real_diseases():
+    claim = "Malaria mostly spreads to people through the bites of infected mosquitoes."
+    q = generate_question_template(claim, "malaria")
+    assert q == "How does malaria spread?"
+
+
+def test_generate_question_template_prevention_excludes_immunisation():
+    # Regression test: "How can immunisation be prevented?" is backwards --
+    # immunisation IS the prevention measure.
+    claim = "Being vaccinated is the best way to prevent getting sick with measles."
+    q = generate_question_template(claim, "immunisation")
+    assert "prevented" not in q
+    assert q == "What should I know about immunisation?"
+
+
+def test_generate_question_template_prevention_still_applies_to_diseases():
+    claim = "Malaria can be prevented by avoiding mosquito bites and with medicines."
+    q = generate_question_template(claim, "malaria")
+    assert q == "How can malaria be prevented?"
+
+
 def test_generate_question_dispatches_template_backend():
     claim = "Malaria is treated with antimalarial medicines."
     q, backend_used = generate_question(claim, "malaria", backend="template")

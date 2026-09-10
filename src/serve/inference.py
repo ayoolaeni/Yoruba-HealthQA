@@ -63,16 +63,24 @@ class ModelBackend:
                 temperature=decoding.get("temperature", 0.0) or None,
                 num_beams=decoding.get("num_beams", 1),
                 repetition_penalty=decoding.get("repetition_penalty", 1.0),
+                no_repeat_ngram_size=decoding.get("no_repeat_ngram_size", 0),
             )
         text = self.tokenizer.decode(generated[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
         return text.strip()
 
 
 class InferenceService:
-    def __init__(self, eval_config_path: str | Path = "configs/eval.yaml", backend: ModelBackend | None = None):
+    def __init__(self, eval_config_path: str | Path = "configs/eval.yaml", backend: ModelBackend | None = None,
+                 decoding_overrides: dict | None = None):
+        """decoding_overrides lets a caller (e.g. the live demo app) shrink
+        things like max_new_tokens for responsiveness on CPU, WITHOUT
+        touching configs/eval.yaml -- that file is the source of truth for
+        Phase 6's formal automatic evaluation (comparing B1-B4 against M),
+        and changing it would silently affect real dissertation numbers
+        later just to make a demo feel faster today."""
         with open(eval_config_path, encoding="utf-8") as f:
             eval_cfg = yaml.safe_load(f)
-        self.decoding = eval_cfg["decoding"]
+        self.decoding = {**eval_cfg["decoding"], **(decoding_overrides or {})}
         self._backend = backend  # None until load_backend() or one is injected (e.g. in tests)
 
     def load_backend(self, base_model: str, adapter_path: str | None = None) -> None:

@@ -71,7 +71,15 @@ def log_interaction(question: str, outcome: GuardrailOutcome, response_text: str
 
 
 def build_service() -> InferenceService:
-    service = InferenceService(eval_config_path="configs/eval.yaml")
+    # YHQA_MAX_NEW_TOKENS: optional, shrinks response length for a snappier
+    # live demo on CPU-only hardware, without touching configs/eval.yaml
+    # (that file's max_new_tokens must stay whatever Phase 6's formal
+    # automatic evaluation actually used -- this override never reaches it).
+    overrides = {}
+    max_new_tokens_override = os.environ.get("YHQA_MAX_NEW_TOKENS")
+    if max_new_tokens_override:
+        overrides["max_new_tokens"] = int(max_new_tokens_override)
+    service = InferenceService(eval_config_path="configs/eval.yaml", decoding_overrides=overrides)
     base_model = os.environ.get("YHQA_BASE_MODEL")
     if base_model:
         adapter_path = os.environ.get("YHQA_ADAPTER_PATH") or None

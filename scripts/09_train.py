@@ -108,12 +108,34 @@ def compute_val_chrf(model, tokenizer, val_records: list[dict], max_new_tokens: 
     return corpus_chrf(hyps, refs)
 
 
+def compute_warmup_steps(warmup_ratio: float, n_train_examples: int, per_device_train_batch_size: int,
+                          gradient_accumulation_steps: int, num_train_epochs: float) -> int:
+    """Converts a warmup_ratio into an equivalent warmup_steps count.
+
+    TrainingArguments' `warmup_ratio` kwarg was removed in transformers 5.x
+    (confirmed: transformers==4.44.2, which requirements.txt pins for the
+    main GPU pipeline, has it; transformers 5.16.1, which a Colab notebook
+    with unpinned `pip install -U transformers` ends up on, does not --
+    `TypeError: unexpected keyword argument 'warmup_ratio'` on a real run).
+    `warmup_steps` exists in both, so compute it here instead of depending on
+    whichever transformers version happens to be installed.
+    """
+    effective_batch_size = per_device_train_batch_size * gradient_accumulation_steps
+    steps_per_epoch = max(1, -(-n_train_examples // effective_batch_size))  # ceil division
+    total_steps = int(steps_per_epoch * num_train_epochs)
+    return max(0, round(total_steps * warmup_ratio))
+
+
 def train_one_run(base_model: str, train_records, val_records, hparams: dict, run_dir: Path, seed: int) -> dict:
     from transformers import DataCollatorForSeq2Seq, Trainer, TrainingArguments
 
     model, tokenizer = build_model_and_tokenizer(base_model, hparams["lora"])
     train_ds = build_hf_dataset(train_records, tokenizer, hparams["max_seq_length"])
 
+    warmup_steps = compute_warmup_steps(
+        hparams["warmup_ratio"], len(train_records), hparams["per_device_train_batch_size"],
+        hparams["gradient_accumulation_steps"], hparams["epochs"],
+    )
     args = TrainingArguments(
         output_dir=str(run_dir),
         per_device_train_batch_size=hparams["per_device_train_batch_size"],
@@ -121,7 +143,7 @@ def train_one_run(base_model: str, train_records, val_records, hparams: dict, ru
         learning_rate=hparams["learning_rate"],
         num_train_epochs=hparams["epochs"],
         lr_scheduler_type="cosine",
-        warmup_ratio=hparams["warmup_ratio"],
+        warmup_steps=warmup_steps,
         logging_steps=hparams["logging_steps"],
         save_steps=hparams["save_steps"],
         save_total_limit=2,

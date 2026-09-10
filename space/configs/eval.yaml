@@ -1,0 +1,74 @@
+# Metrics, baseline systems, and decoding parameters for Phase 6/7 evaluation.
+
+seed: 42
+
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  num_beams: 1
+  repetition_penalty: 1.3
+  # Blocks any 3-word phrase from repeating verbatim -- added after a real
+  # small-dataset demo fine-tune (169 examples) produced a degenerate loop
+  # ("awon ami arun" repeated dozens of times). repetition_penalty alone
+  # (was 1.1) was not enough to stop it; this is the standard, well-known
+  # fix for exactly this failure mode and is a safe default regardless of
+  # how well-trained a system is.
+  no_repeat_ngram_size: 3
+
+systems:
+  B1:
+    description: "Base model, zero-shot, Yoruba prompt"
+    kind: base_zero_shot
+  B2:
+    description: "Base model, few-shot in-context"
+    kind: base_few_shot
+    n_shots: 4
+  B3:
+    description: "Translate -> English model -> translate back"
+    kind: translate_pivot
+    english_model: null   # e.g. an instruction-tuned English-only model
+    mt_model: "facebook/nllb-200-distilled-600M"
+  B4:
+    description: "Strong proprietary model, zero-shot Yoruba"
+    kind: proprietary_api
+    provider: null         # researcher must set (e.g. "anthropic", "openai") and supply API key via .env
+    model_name: null
+  M:
+    description: "This study's fine-tuned model"
+    kind: finetuned
+    adapter_path: null     # filled after 09_train.py produces a checkpoint
+
+metrics:
+  primary: "chrf++"
+  secondary:
+    - bleu_sacrebleu
+    - rouge_l
+    - bertscore
+    - africomet   # only computed if a checkpoint is configured below
+  task_specific:
+    - diacritic_accuracy
+    - language_consistency
+
+africomet:
+  checkpoint_path: null  # e.g. path to a downloaded AfriCOMET checkpoint; skipped with a logged warning if null
+
+significance:
+  method: paired_bootstrap
+  n_resamples: 1000
+  ci: 0.95
+  compare_against: "M"
+
+human_eval:
+  min_sample_size: 150
+  rubric_dims_likert:
+    - factual_correctness
+    - completeness
+    - linguistic_fluency
+    - diacritic_accuracy
+    - cultural_appropriateness
+  likert_scale: [1, 2, 3, 4, 5]
+  harm_categories: ["None", "Low", "Moderate", "Severe"]
+  agreement:
+    harm_stat: fleiss_kappa
+    ordinal_stat: krippendorff_alpha

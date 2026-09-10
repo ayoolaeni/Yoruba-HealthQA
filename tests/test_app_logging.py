@@ -26,7 +26,8 @@ def test_log_interaction_never_writes_raw_question_text(tmp_path, monkeypatch):
 
     record = json.loads(content.strip())
     assert set(record.keys()) == {"timestamp_utc", "question_sha256", "guardrail_outcome",
-                                   "response_char_len", "latency_seconds"}
+                                   "response_char_len", "latency_seconds", "served_from_cache"}
+    assert record["served_from_cache"] is False
     assert record["guardrail_outcome"] == "answered"
     assert record["response_char_len"] == len("some answer text")
     assert len(record["question_sha256"]) == 64  # sha256 hex digest
@@ -70,6 +71,54 @@ def test_answer_fn_returns_service_answer(tmp_path, monkeypatch):
     answer_fn = app_module.make_answer_fn(FakeService(response_text="Àmì àrùn ibà ni ibà gbígbóná."))
     result = answer_fn("Kí ni àwọn àmì àrùn ibà?")
     assert result == "Àmì àrùn ibà ni ibà gbígbóná."
+
+
+def test_answer_fn_serves_cached_answer_without_calling_service(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "INTERACTION_LOG_PATH", tmp_path / "log.jsonl")
+    service = FakeService(response_text="should not be used")
+    cached = {"Kí ni àwọn àmì àrùn ibà?": "Èyí ni ìdáhùn gidi tí a ti kó sílẹ̀ tẹ́lẹ̀."}
+    answer_fn = app_module.make_answer_fn(service, cached_answers=cached)
+
+    result = answer_fn("Kí ni àwọn àmì àrùn ibà?")
+
+    assert "Èyí ni ìdáhùn gidi tí a ti kó sílẹ̀ tẹ́lẹ̀." in result
+    assert DISCLAIMER_YO in result  # cached path still applies G3 via apply_disclaimer()
+
+
+def test_answer_fn_cache_miss_falls_back_to_live_service(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "INTERACTION_LOG_PATH", tmp_path / "log.jsonl")
+    service = FakeService(response_text="live answer")
+    cached = {"a different question entirely": "cached answer"}
+    answer_fn = app_module.make_answer_fn(service, cached_answers=cached)
+
+    result = answer_fn("Kí ni àwọn àmì àrùn ibà?")
+
+    assert result == "live answer"
+
+
+def test_log_interaction_records_served_from_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "INTERACTION_LOG_PATH", tmp_path / "log.jsonl")
+    service = FakeService()
+    cached = {"Kí ni àwọn àmì àrùn ibà?": "cached text"}
+    answer_fn = app_module.make_answer_fn(service, cached_answers=cached)
+
+    answer_fn("Kí ni àwọn àmì àrùn ibà?")
+
+    log_content = (tmp_path / "log.jsonl").read_text(encoding="utf-8")
+    record = json.loads(log_content.strip())
+    assert record["served_from_cache"] is True
+
+
+def test_load_cached_answers_returns_empty_dict_when_file_missing(monkeypatch):
+    monkeypatch.setattr(app_module, "CACHED_ANSWERS_PATH", Path("/does/not/exist.json"))
+    assert app_module.load_cached_answers() == {}
+
+
+def test_load_cached_answers_loads_real_file(tmp_path, monkeypatch):
+    cache_file = tmp_path / "cached_answers.json"
+    cache_file.write_text(json.dumps({"Q1?": "A1."}, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(app_module, "CACHED_ANSWERS_PATH", cache_file)
+    assert app_module.load_cached_answers() == {"Q1?": "A1."}
 
 
 def test_answer_fn_handles_missing_backend_gracefully(tmp_path, monkeypatch):

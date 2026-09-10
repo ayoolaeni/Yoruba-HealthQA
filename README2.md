@@ -286,7 +286,24 @@ review step just to produce a number."*
 
 ---
 
-## 7. Likely defence questions and short honest answers
+## 7. Alternative to Docker: hosting it on Hugging Face Spaces (no install for your client)
+
+If you'd rather your client just open a **web link** instead of installing
+Docker, the `space/` folder in this project is a ready-to-upload copy of the
+app for **Hugging Face Spaces** (a free hosting service for exactly this
+kind of app).
+
+**How to deploy it:**
+1. Go to [huggingface.co/new-space](https://huggingface.co/new-space) (create a free account first if needed).
+2. Give it a name, choose **SDK: Gradio**, choose the **free CPU** hardware tier, click Create.
+3. On the new Space's page, go to the **Files** tab and upload everything from this project's `space/` folder (drag and drop `app.py`, `requirements.txt`, `README.md`, `cached_answers.json`, and the `src/` and `configs/` folders).
+4. Wait a minute or two for it to build. Your client can then open the Space's URL directly — no install, no setup, works on any device with a browser.
+
+**Important limitation:** by design, this Space does **not** load the full trained model live (an 8B model is too slow on free hosting). Instead, `cached_answers.json` holds a small number of pre-agreed demo questions with their **real, genuinely captured** answers from the actual trained model — those respond instantly; anything else shows the same honest "not configured" placeholder the rest of this guide already explains. This is the safest option for a live presentation, since it can't slow down or hang in front of your audience.
+
+---
+
+## 8. Likely defence questions and short honest answers
 
 **Q: Is the dataset finished?**
 No — 714 draft English pairs exist from real WHO/MedlinePlus sources, out of

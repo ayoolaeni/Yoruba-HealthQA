@@ -1,0 +1,9 @@
+# Deliberately the LIGHTWEIGHT stack only (matches ../requirements-app.txt).
+# This Space runs in cache-only mode by default (see README.md) -- it does
+# NOT load an 8B model, so it never needs torch/transformers/peft/
+# bitsandbytes. If you later add YHQA_BASE_MODEL as a Space secret to enable
+# live generation, add those packages here too.
+gradio==6.26.0
+pyyaml==6.0.2
+python-dotenv==1.0.1
+rich==13.8.1

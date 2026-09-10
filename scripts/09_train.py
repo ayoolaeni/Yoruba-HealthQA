@@ -109,7 +109,7 @@ def compute_val_chrf(model, tokenizer, val_records: list[dict], max_new_tokens: 
 
 
 def train_one_run(base_model: str, train_records, val_records, hparams: dict, run_dir: Path, seed: int) -> dict:
-    from transformers import DataCollatorForLanguageModeling, Trainer, TrainingArguments
+    from transformers import DataCollatorForSeq2Seq, Trainer, TrainingArguments
 
     model, tokenizer = build_model_and_tokenizer(base_model, hparams["lora"])
     train_ds = build_hf_dataset(train_records, tokenizer, hparams["max_seq_length"])
@@ -132,7 +132,16 @@ def train_one_run(base_model: str, train_records, val_records, hparams: dict, ru
         bf16=True,
         report_to=[],
     )
-    collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    # DataCollatorForLanguageModeling is the WRONG collator here -- verified
+    # by testing it directly: it calls tokenizer.pad(), which pads
+    # "input_ids"/"attention_mask" correctly but does not know how to pad a
+    # pre-computed "labels" field of a different length, and crashes on the
+    # first batch with more than one distinct sequence length (i.e.
+    # immediately, on any real dataset). DataCollatorForSeq2Seq pads
+    # "labels" with label_pad_token_id (-100, ignored by the loss) instead
+    # of the tokenizer's pad token, which is exactly what our prompt-masked
+    # labels (see src/model/prompt.py:mask_prompt_loss) need.
+    collator = DataCollatorForSeq2Seq(tokenizer, padding=True, label_pad_token_id=-100)
     trainer = Trainer(model=model, args=args, train_dataset=train_ds, data_collator=collator)
     train_result = trainer.train()
     trainer.save_model(str(run_dir))

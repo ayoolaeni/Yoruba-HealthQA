@@ -105,6 +105,17 @@ def _cuda_available() -> bool:
 
 # --- task-specific: language consistency ------------------------------------
 
+# Below this proportion of Yoruba-consistent tokens, treat a Yoruba text field
+# as "looks untranslated/mostly-English" rather than "a normal sentence with a
+# few embedded proper nouns/technical terms". Calibrated against real
+# reviewer-corrected text (postedit_sample_200.xlsx): the single worst
+# legitimate case -- a short sentence naming COVID-19, coronavirus, and
+# SARS-CoV-2 -- scored 0.625; genuinely untranslated English scores near 0.
+# Shared by scripts/04b_import_postedit.py and src/data/schema.py so the
+# threshold and its justification live in exactly one place.
+MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT = 0.5
+
+
 def language_consistency(hyps: list[str]) -> float:
     """Proportion of whitespace tokens across `hyps` that use only characters
     permitted in Yoruba orthography (strict charset check per token).

@@ -56,7 +56,20 @@ NON_YORUBA_LATIN = frozenset("cqvxzCQVXZ")
 # specifically 'c'/'v'/'q'/'x'/'z'-bearing acronyms like HIV/COVID that need
 # this explicit allowance. Extend via configs/data.yaml-driven tooling if a
 # project needs a different accepted list; this is deliberately small.
-ACCEPTED_LOANWORDS = frozenset({"hiv", "aids", "covid", "covid-19", "prep", "art"})
+#
+# The block below was added after a real post-editor's corrected Yoruba text
+# (postedit_sample_200.xlsx) was rejected by this validator -- every one of
+# these is a deliberate, consistent choice by that reviewer to keep a
+# specific drug name, vaccine/brand name, organisation name, or WASH
+# technical term in its English form (standard practice: these generally
+# aren't transliterated in any language's health communication), not
+# accidental English contamination slipping through unreviewed.
+ACCEPTED_LOANWORDS = frozenset({
+    "hiv", "aids", "covid", "covid-19", "prep", "art",
+    "cholera", "ocv", "shancol", "gavi, the vaccine alliance",
+    "sludge", "sewerage", "septic tank", "drain",
+    "levofloxacin", "pasteurize", "pasteurized", "pasteurise", "pasteurised",
+})
 _LOANWORD_PATTERN = re.compile(
     r"\b(?:" + "|".join(re.escape(w) for w in ACCEPTED_LOANWORDS) + r")\b", re.IGNORECASE,
 )
@@ -69,7 +82,10 @@ def _mask_loanwords(text: str) -> str:
 
 # Punctuation, whitespace, and digits are always permitted (question marks,
 # commas, numerals in dosage-free contexts, etc.) regardless of strict mode.
-ALLOWED_OTHER = frozenset(" \t\n\r.,;:!?'‘’\"“”()-–—/%&0123456789")
+# Currency symbols ($, ₦, £, €) were added after a real post-edited answer
+# quoting a WHO cost estimate ("US$22 billion") was rejected -- global-burden
+# claims routinely cite dollar/naira figures.
+ALLOWED_OTHER = frozenset(" \t\n\r.,;:!?'‘’\"“”()-–—/%&0123456789$₦£€")
 
 
 def normalize_nfc(text: str) -> str:

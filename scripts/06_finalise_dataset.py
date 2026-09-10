@@ -87,7 +87,13 @@ def main() -> None:
     parser.add_argument("--data-config", default="configs/data.yaml")
     parser.add_argument("--out-dir", default="data/final")
     parser.add_argument("--reports-dir", default="reports")
-    parser.add_argument("--require-both-validations", action="store_true", default=True)
+    parser.add_argument(
+        "--include-unvalidated-for-demo-only", action="store_true", default=False,
+        help="DANGER: skips the validated_clin/validated_ling gate and includes post-edited-but-"
+             "NOT-clinically/linguistically-signed-off records too. Only for building a throwaway "
+             "demo/proof-of-concept model to show a UI working -- the result is NOT the dissertation's "
+             "validated dataset and must never be reported as one. Prints a loud warning when used.",
+    )
     args = parser.parse_args()
 
     in_path = Path(args.input)
@@ -104,11 +110,24 @@ def main() -> None:
     if not all_records:
         raise MissingInputError(str(in_path), stage="06_finalise_dataset", hint="input file is empty")
 
-    with RunManifest(stage="06_finalise_dataset", config={"input": str(in_path)}, seed=seed) as run:
+    demo_mode = args.include_unvalidated_for_demo_only
+    with RunManifest(stage="06_finalise_dataset", config={"input": str(in_path), "demo_mode": demo_mode},
+                      seed=seed) as run:
         n_total = len(all_records)
-        validated = [r for r in all_records if r.get("validated_clin") and r.get("validated_ling")]
+        if demo_mode:
+            logger.warning("=" * 70)
+            logger.warning("DEMO MODE: --include-unvalidated-for-demo-only is set. Records that were")
+            logger.warning("post-edited but NOT clinically/linguistically validated are being included.")
+            logger.warning("The resulting dataset/model is a throwaway proof-of-concept ONLY and must")
+            logger.warning("NEVER be presented as the dissertation's validated result.")
+            logger.warning("=" * 70)
+            validated = [r for r in all_records
+                         if (r.get("question_yo_final") or "").strip() and (r.get("answer_yo_final") or "").strip()]
+        else:
+            validated = [r for r in all_records if r.get("validated_clin") and r.get("validated_ling")]
         n_not_validated = n_total - len(validated)
-        logger.info(f"{len(validated)}/{n_total} records passed both clinical and linguistic validation")
+        logger.info(f"{len(validated)}/{n_total} records included "
+                    f"({'demo mode: post-edited only' if demo_mode else 'passed both clinical and linguistic validation'})")
 
         # --- near-duplicate removal ---
         dedup_cfg = data_cfg["dedup"]

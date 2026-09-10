@@ -20,6 +20,14 @@ data/interim/
 data/validated/
 data/final/
 
+# Demo-only artefacts (scripts/06_finalise_dataset.py
+# --include-unvalidated-for-demo-only): built from post-edited-but-NOT-
+# clinically/linguistically-validated records, for a presentation proof-of-
+# concept only. Never commit these -- they must not be mistaken for the
+# dissertation's validated dataset/results.
+data/final_demo/
+reports_demo/
+
 # The unblinding key must never be committed or shared with raters
 reports/.blinding_key.json
 

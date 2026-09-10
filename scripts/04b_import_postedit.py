@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """Phase 1.5 -- Import a completed post-editing spreadsheet.
 
-Validates that question_yo_final/answer_yo_final are filled in and use only
-legal Yoruba characters (src/data/yoruba_text.validate_charset), merges the
-edits back into the working JSONL, and sets post_edited=True for rows the
-editor actually changed relative to the _mt columns.
+Validates that question_yo_final/answer_yo_final are filled in and are
+PREDOMINANTLY Yoruba (see MIN_LANGUAGE_CONSISTENCY below), merges the edits
+back into the working JSONL, and sets post_edited=True for rows the editor
+actually changed relative to the _mt columns.
 
 Usage:
     python scripts/04b_import_postedit.py --edited data/interim/postedit_batch_01.xlsx \
@@ -20,7 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.data.schema import read_jsonl, write_jsonl
-from src.data.yoruba_text import normalize_nfc, validate_charset
+from src.data.yoruba_text import normalize_nfc
+from src.eval.metrics import MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT, language_consistency
 from src.utils.logging import MissingInputError, get_logger
 from src.utils.manifest import RunManifest
 from src.utils.seeding import seed_everything
@@ -28,6 +29,25 @@ from src.utils.seeding import seed_everything
 logger = get_logger("04b_import_postedit")
 
 REQUIRED_COLUMNS = ["id", "question_yo_final", "answer_yo_final"]
+
+# A real, careful native-speaker post-edit of postedit_sample_200.xlsx
+# revealed that a per-CHARACTER "zero illegal letters anywhere" check
+# (validate_charset) is the wrong tool here: professional Yoruba health
+# translation routinely keeps specific drug names, virus/pathogen names,
+# lab-test names, WHO programme/committee names, and person/place names in
+# their original English/Latin form -- standard practice in essentially
+# every language's health communication, not an error. Enumerating every
+# such term by hand doesn't scale (measles vaccines, malaria chemoprevention
+# programmes, mental-health diagnoses, and WASH infrastructure terms alone
+# produced dozens of distinct legitimate cases). Checking the PROPORTION of
+# Yoruba-consistent tokens (src.eval.metrics.language_consistency) instead
+# catches the failure mode that actually matters -- a row left entirely or
+# mostly untranslated -- without rejecting a handful of proper nouns/technical
+# terms embedded in an otherwise fluent Yoruba sentence. See
+# src.eval.metrics.MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT for how the
+# threshold was calibrated -- src/data/schema.py's final-record validation
+# uses the same shared constant.
+MIN_LANGUAGE_CONSISTENCY = MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT
 
 
 def read_xlsx_rows(path: Path) -> list[dict]:
@@ -63,10 +83,11 @@ def validate_edited_rows(rows: list[dict]) -> list[str]:
             text = (row.get(field) or "").strip()
             if not text:
                 continue
-            result = validate_charset(text, strict=True, allow_loanwords=True)
-            if not result.is_valid:
-                problems.append(f"row id={row.get('id', '?')}: '{field}' has illegal characters "
-                                 f"{result.invalid_chars!r} -- {text!r}")
+            consistency = language_consistency([text])
+            if consistency < MIN_LANGUAGE_CONSISTENCY:
+                problems.append(f"row id={row.get('id', '?')}: '{field}' is only "
+                                 f"{consistency:.0%} Yoruba-consistent (need >= {MIN_LANGUAGE_CONSISTENCY:.0%}) "
+                                 f"-- looks mostly untranslated: {text!r}")
     return problems
 
 

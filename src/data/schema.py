@@ -27,7 +27,8 @@ from typing import Any, Iterable, Iterator
 
 import yaml
 
-from src.data.yoruba_text import normalize_nfc, strip_diacritics, validate_charset
+from src.data.yoruba_text import normalize_nfc, strip_diacritics
+from src.eval.metrics import MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT, language_consistency
 
 QUESTION_TYPES = {"derived", "elicited", "out_of_scope"}
 
@@ -87,9 +88,19 @@ def validate_record(record: dict[str, Any], valid_topics: set[str] | None = None
             continue
         if normalize_nfc(text) != text:
             problems.append(f"field '{field}' is not NFC-normalised")
-        result = validate_charset(text, strict=strict_charset, allow_loanwords=True)
-        if not result.is_valid:
-            problems.append(f"field '{field}' contains non-Yoruba characters: {result.invalid_chars!r}")
+        if strict_charset:
+            # Proportion-based, not per-character: see
+            # src.eval.metrics.MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT for
+            # why a "zero non-Yoruba characters anywhere" check is wrong for
+            # real post-edited health text (it rejects legitimate drug/virus/
+            # organisation names that professional translation keeps in
+            # English).
+            consistency = language_consistency([text])
+            if consistency < MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT:
+                problems.append(
+                    f"field '{field}' is only {consistency:.0%} Yoruba-consistent "
+                    f"(need >= {MIN_LANGUAGE_CONSISTENCY_FOR_YORUBA_TEXT:.0%}) -- looks mostly untranslated"
+                )
 
     return problems
 

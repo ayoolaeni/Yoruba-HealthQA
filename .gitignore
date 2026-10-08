@@ -26,7 +26,13 @@ data/final/
 # concept only. Never commit these -- they must not be mistaken for the
 # dissertation's validated dataset/results.
 data/final_demo/
+data/final_demo_expanded/
 reports_demo/
+reports/demo_only_expanded/
+
+# Trained adapter files for uploading to Kaggle (the .safetensors is
+# ~168 MB, over GitHub's 100 MB file limit).
+yorubaLlama_adapter_upload/
 
 # The unblinding key must never be committed or shared with raters
 reports/.blinding_key.json

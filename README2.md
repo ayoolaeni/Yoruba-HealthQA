@@ -166,6 +166,35 @@ YHQA_ADAPTER_PATH=<path to the trained fine-tuning file>
 docker compose up --build
 ```
 
+### A third option: reliable real answers without waiting on the AI model (recommended for a live demo)
+
+The small AI model trained so far (only 169 examples) doesn't yet give
+accurate answers live — that's expected and explained in Section 6. For a
+*live presentation*, there's a safer middle ground: instead of asking the
+AI to generate a brand-new answer on the spot (which can come out wrong),
+the app can **look up the closest matching question in the same validated
+dataset and show its real, human-checked answer** — word for word, nothing
+invented. Turn it on with one setting:
+
+```
+YHQA_ANSWER_MODE=retrieval
+python app/app.py
+```
+
+The status line will honestly say *"answering via lookup of validated
+data (not a model generating text)"* — so you're never misrepresenting
+what's happening. This is the safest option to actually show working,
+correct-sounding Yorùbá answers on stage today.
+
+**One thing to say clearly when you present this** (see Section 8 for the
+full talking points): *"For this live demo, I'm using a lookup method
+over my validated dataset for reliability. The dissertation's actual
+AI model — the one I trained and formally evaluated with real test
+scores — is a separate piece of work I'll also show you."* That sentence
+is all it takes to keep this completely honest — it doesn't change your
+dissertation topic or your results, it's just being upfront about which
+part of the demo is which.
+
 ---
 
 ## 5. A simple way to describe the "how it works" flow in your defence
@@ -306,14 +335,22 @@ kind of app).
 ## 8. Likely defence questions and short honest answers
 
 **Q: Is the dataset finished?**
-No — 714 draft English pairs exist from real WHO/MedlinePlus sources, out of
-a target of 1,500–3,000 fully Yorùbá, human-reviewed pairs. Translation and
-human review are the next steps.
+Not fully — 1,443 cleaned English pairs exist from real WHO/MedlinePlus
+sources, out of a target of 1,500–3,000 fully Yorùbá, human-reviewed pairs.
+A 208-record subset has been machine-translated AND genuinely post-edited
+by a human Yorùbá speaker — that subset is what the demo AI model was
+trained on. The rest still needs translation and human review.
 
 **Q: Has the AI model actually been trained yet?**
-No — training needs the finished, human-reviewed Yorùbá dataset and a GPU
-computer, neither of which was available at this stage. The training code
-itself is written and ready to run once those two things exist.
+Yes, on the small 169-example post-edited subset, using a real training
+run (LoRA fine-tuning, on a free GPU) with hyperparameters chosen by an
+actual validation sweep, not a guess. Being honest about the result: with
+only 169 examples, it produces real Yorùbá words but not yet reliably
+accurate health answers — that's expected at this data scale, and it's why
+the live demo defaults to a lookup-based fallback (see Section 4) rather
+than showing unreliable generated text. The training pipeline itself is
+proven to work end-to-end; scaling it to the full 1,500–3,000 examples on
+a larger base model is the next step.
 
 **Q: How do you know the safety rules actually work, if there's no AI yet?**
 Because the safety rules don't depend on the AI at all — they're plain
@@ -324,6 +361,14 @@ been tested with dozens of example questions and all pass.
 So the whole system — data flow, safety checks, the web interface — can be
 proven to work end-to-end early, rather than discovering a plumbing problem
 only after weeks of expensive GPU training.
+
+**Q: If the live demo uses a lookup instead of the AI generating text, isn't that a different project?**
+No. My dissertation topic and research is "build and evaluate a fine-tuned
+AI model for Yorùbá health questions" — that work (the training, the real
+test scores) is separate from tonight's demo and stands on its own. The
+lookup mode is just a reliable way to *show* something working live; I say
+so explicitly when presenting it, so nothing about it is a hidden
+substitution.
 
 **Q: Is any part of this made up or faked?**
 No. Every number and file described here was actually produced by running

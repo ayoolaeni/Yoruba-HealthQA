@@ -1,0 +1,139 @@
+==============================================================
+  YORUBA HEALTHQA - HOW TO RUN THE APP (QUICK SETUP)
+==============================================================
+
+There are two ways to run the app:
+
+  ONLINE  = the real fine-tuned AI model (YorubaLlama), running on
+            Kaggle's free GPU. Gives you a web link you can send to
+            anyone (your client, supervisor, audience).
+            Needs internet. Best for presentations.
+
+  OFFLINE = runs on your own laptop, no internet needed.
+            It does NOT use the AI model. It shows the closest matching
+            answer from the human-checked dataset (lookup mode).
+            Use it as a backup if Kaggle or the internet fails.
+
+
+==============================================================
+  PART 1 - ONLINE (Kaggle + public link)
+==============================================================
+
+ONE-TIME SETUP (already done, only check if something breaks)
+  - Kaggle account with phone number verified.
+  - Notebook "kaggle_serve_app" on Kaggle.
+  - Adapter dataset (the 4 files from Downloads\yorubaLlama_adapter_upload)
+    attached to the notebook under "Input".
+  - Add-ons > Secrets: HF_TOKEN added and its tick box ON.
+  - Never paste the token in the notebook, a chat, or this file.
+
+START IT (about 20 minutes before you present)
+  1. Go to kaggle.com > profile picture > Your Work > open "kaggle_serve_app".
+  2. On the right panel check:
+       Accelerator = GPU T4
+       Internet    = On
+  3. Click "Save Version" (top right)
+       > choose "Save & Run All (Commit)" > click "Save".
+  4. Wait 10 to 15 minutes (it is downloading and loading the model).
+  5. Open the running version > "Logs" tab. Look for a line like:
+       Running on public URL: https://xxxxxxxx.gradio.live
+  6. Copy that link. Open it in your browser and ask one test question:
+       Ki ni awon ami arun iba?   (type it with the Yoruba accents:
+       Kí ni àwọn àmì àrùn ibà?)
+  7. If you get an answer, send the link to your client.
+
+  You can close Kaggle and your laptop. The link keeps working
+  while the Kaggle run is on.
+
+STOP IT (after the presentation)
+  1. Go to kaggle.com > Your Work > open "kaggle_serve_app".
+  2. Open the version that is running and click "Cancel run"
+     (or the stop button next to the running item).
+  3. The link stops working straight away.
+
+  Always stop it. A run left on keeps using your free GPU hours
+  (about 30 hours per week) for up to 12 hours.
+
+REMEMBER
+  - You get a NEW link every time you start. Old links do not work.
+  - The link dies when the run stops (cancelled, or after about 12 hours).
+    Do not start it the night before.
+  - Anyone with the link can use it. Only send it to your client.
+
+IF SOMETHING GOES WRONG (read the Logs tab)
+  "No user secrets exist" / HF_TOKEN   -> Add-ons > Secrets, add HF_TOKEN,
+                                           tick it ON, start again.
+  "gated repo" / 401 / 403             -> token is wrong or expired. Make a new
+                                           Read token at
+                                           huggingface.co/settings/tokens and
+                                           update the HF_TOKEN secret.
+  "No adapter_config.json ... found"   -> adapter dataset not attached.
+                                           Click "Add Input" and add it.
+  Can't turn on GPU / Internet         -> phone number not verified on Kaggle.
+  Link says "No interface is running"  -> the run stopped. Start again and use
+                                           the new link.
+  No GPU hours left this week          -> use the OFFLINE version below.
+
+
+==============================================================
+  PART 2 - OFFLINE (on this laptop)
+==============================================================
+
+OPTION A - WITH DOCKER (recommended)
+
+  START IT
+  1. Open "Docker Desktop" and wait until it says it is running.
+  2. Open this project folder in File Explorer
+     (the folder that has Dockerfile, app, src in it).
+  3. Click the address bar at the top, type  powershell  and press Enter.
+  4. Type this and press Enter:
+       docker compose up --build
+  5. Wait until you see:
+       Running on local URL:  http://0.0.0.0:7860
+  6. Open your browser and go to:
+       http://localhost:7860
+     (Use "localhost". Do NOT type 0.0.0.0 in the browser, it will not work.)
+
+  STOP IT
+  1. Go back to the PowerShell window and press  Ctrl + C
+  2. Then type this and press Enter:
+       docker compose down
+  3. You can now close Docker Desktop.
+
+
+OPTION B - WITHOUT DOCKER (uses the project's Python)
+
+  START IT
+  1. Open PowerShell in this project folder (same as steps 2-3 above).
+  2. Type these two lines, pressing Enter after each:
+       $env:YHQA_ANSWER_MODE = "retrieval"
+       .\.venv\Scripts\python.exe app\app.py
+  3. Open your browser and go to:
+       http://localhost:7860
+
+  STOP IT
+  1. Go back to the PowerShell window and press  Ctrl + C
+  2. Close the window.
+
+
+OFFLINE PROBLEMS
+  "docker: command not found" / Docker error -> Docker Desktop is not open
+                                                or not finished starting.
+  "port 7860 already in use"                 -> the app is already running in
+                                                another window. Stop that one
+                                                first (Ctrl + C), or restart
+                                                the laptop.
+  "This site can't be reached"               -> check you typed
+                                                http://localhost:7860
+
+
+==============================================================
+  WHAT TO SAY WHEN YOU PRESENT
+==============================================================
+  - ONLINE: "This is our fine-tuned YorubaLlama model generating the
+    answer live."
+  - OFFLINE: "This is the backup mode. It looks up the closest
+    human-checked answer from our dataset. It is not the AI model."
+    (The app's status line also says this on screen.)
+  - The app gives general health information only. It does not
+    diagnose and refuses medicine-dose questions.

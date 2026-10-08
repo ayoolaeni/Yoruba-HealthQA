@@ -96,7 +96,25 @@ def load_cached_answers() -> dict[str, str]:
         return json.load(f)
 
 
-def build_service() -> InferenceService:
+def build_service():
+    # YHQA_ANSWER_MODE=retrieval: demo-only fallback that looks up a real,
+    # human-post-edited answer from the validated dataset instead of
+    # generating one (src/serve/retrieval.py). This is NOT the
+    # dissertation's system under formal evaluation -- see that module's
+    # docstring. Say so explicitly whenever this mode is used in a
+    # presentation.
+    if os.environ.get("YHQA_ANSWER_MODE", "model").lower() == "retrieval":
+        from src.serve.retrieval import RetrievalService
+
+        dataset_paths_env = os.environ.get("YHQA_RETRIEVAL_DATA")
+        dataset_paths = (
+            [p.strip() for p in dataset_paths_env.split(",") if p.strip()]
+            if dataset_paths_env
+            else ["data/final_demo/train.jsonl", "data/final_demo/val.jsonl", "data/final_demo/test.jsonl"]
+        )
+        logger.info(f"answer engine: retrieval mode over {dataset_paths} (demo-only, not system M)")
+        return RetrievalService(dataset_paths)
+
     # YHQA_MAX_NEW_TOKENS: optional, shrinks response length for a snappier
     # live demo on CPU-only hardware, without touching configs/eval.yaml
     # (that file's max_new_tokens must stay whatever Phase 6's formal
@@ -180,12 +198,19 @@ def build_demo():
         logger.info(f"loaded {len(cached_answers)} pre-captured answer(s) from {CACHED_ANSWERS_PATH.name} "
                     f"-- those exact questions respond instantly instead of running live generation")
     answer_fn = make_answer_fn(service, cached_answers)
+    retrieval_mode = os.environ.get("YHQA_ANSWER_MODE", "model").lower() == "retrieval"
     model_loaded = os.environ.get("YHQA_BASE_MODEL") is not None
-    status_text = (
-        "🟢 Ẹ̀rọ ìdáhùn ti ń ṣiṣẹ́ — a máa dá ìdáhùn tòótọ́ padà."
-        if model_loaded else
-        "🟡 Ẹ̀rọ ìdáhùn kò tíì gbé kalẹ̀ (àpẹẹrẹ nìkan ni yìí) — àmọ́ gbogbo àyẹ̀wò ààbò ń ṣiṣẹ́ dáadáa."
-    )
+    if retrieval_mode:
+        # Deliberately worded to NOT claim this is the trained model --
+        # see src/serve/retrieval.py's docstring on why that distinction
+        # matters for how this is presented.
+        status_text = (
+            "🟢 Ẹ̀rọ ìdáhùn ń ṣiṣẹ́ nípasẹ̀ àwárí ìdáhùn tí a ti fọwọ́sí (kì í ṣe àwòṣe tí a kọ́ láti dá ìdáhùn sílẹ̀)."
+        )
+    elif model_loaded:
+        status_text = "🟢 Ẹ̀rọ ìdáhùn ti ń ṣiṣẹ́ — a máa dá ìdáhùn tòótọ́ padà."
+    else:
+        status_text = "🟡 Ẹ̀rọ ìdáhùn kò tíì gbé kalẹ̀ (àpẹẹrẹ nìkan ni yìí) — àmọ́ gbogbo àyẹ̀wò ààbò ń ṣiṣẹ́ dáadáa."
 
     with gr.Blocks(title="Yorùbá HealthQA") as demo:
         gr.Markdown("## Yorùbá HealthQA — Ìbéèrè Ìlera Rẹ Lédè Yorùbá")
@@ -216,4 +241,4 @@ if __name__ == "__main__":
     demo = build_demo()
     demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)),
                 theme=gr.themes.Soft(),
-                css=".gradio-container {max-width: 640px !important}")
+                css=".gradio-container {max-width: 640px !important; margin: 0 auto !important; float: none !important}")

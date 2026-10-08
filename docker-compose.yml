@@ -5,6 +5,11 @@ services:
     ports:
       - "7860:7860"
     environment:
+      # Defaults to retrieval mode -- real, human-checked answers looked up
+      # from the validated dataset, no model download and no Hugging Face
+      # login needed. Set YHQA_ANSWER_MODE=model (and YHQA_BASE_MODEL) to
+      # switch to live generation instead -- see README2.md Section 4.
+      YHQA_ANSWER_MODE: ${YHQA_ANSWER_MODE:-retrieval}
       YHQA_BASE_MODEL: ${YHQA_BASE_MODEL:-}
       YHQA_ADAPTER_PATH: ${YHQA_ADAPTER_PATH:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}

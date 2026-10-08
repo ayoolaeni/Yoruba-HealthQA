@@ -61,6 +61,11 @@ SLUG_TO_TOPIC = {
     "mental-disorders": "mental_health",
     "depression": "mental_health",
     "coronavirus-disease-(covid-19)": "covid19",
+    "breastfeeding": "nutrition",
+    "family-planning-contraception": "maternal_health",
+    "adolescent-pregnancy": "maternal_health",
+    "food-safety": "nutrition",
+    "physical-activity": "nutrition",
 }
 
 TOPIC_DISPLAY_NAMES = {

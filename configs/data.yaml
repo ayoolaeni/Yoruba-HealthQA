@@ -55,6 +55,18 @@ sources:
       - mental-disorders             # topic: mental_health
       - depression                   # topic: mental_health
       - coronavirus-disease-(covid-19)  # topic: covid19
+      # Second expansion batch: each slug verified to resolve (HTTP 200)
+      # before being added, same discipline as the first batch above.
+      # breastfeeding is deliberately included: a real translation mistake
+      # ("breastfeeding" mistranslated as "pregnancy") was found in the raw
+      # machine-translation output of the earlier, indirect source material
+      # -- an authoritative fact sheet gives the human reviewer a correct
+      # source to check that exact topic against.
+      - breastfeeding                    # topic: nutrition
+      - family-planning-contraception    # topic: maternal_health
+      - adolescent-pregnancy             # topic: maternal_health
+      - food-safety                      # topic: nutrition
+      - physical-activity                # topic: nutrition
     licence: "CC BY-NC-SA 3.0 IGO"
     licence_url: "https://www.who.int/about/policies/publishing/copyright"
     retrieval_notes: >
